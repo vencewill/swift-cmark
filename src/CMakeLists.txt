@@ -130,6 +130,9 @@ install(FILES
   DESTINATION include
   )
 
+export(TARGETS ${PROGRAM} ${LIBRARY} ${STATICLIBRARY}
+  FILE ${CMAKE_CURRENT_BINARY_DIR}/CMarkExports.cmake)
+
 # Feature tests
 include(CheckIncludeFile)
 include(CheckCSourceCompiles)
