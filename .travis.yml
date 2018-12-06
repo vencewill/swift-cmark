@@ -8,11 +8,17 @@ language: c
 compiler:
  - clang
  - gcc
+matrix:
+  include:
+  - os: linux
+    compiler: gcc
+    env: CMAKE_OPTIONS="-DCMARK_SHARED=OFF"
 addons:
   apt:
     # we need a more recent cmake than travis/linux provides (at least 2.8.9):
     sources:
     - kubuntu-backports
+    - kalakris-cmake
     packages:
     - cmake
     - python3
@@ -23,14 +29,10 @@ before_install:
      then
          echo "Building without python3, to make sure that works."
      fi
+
 script:
- - make
+ - (mkdir -p build && cd build && cmake $CMAKE_OPTIONS ..)
  - make test
- - |
-     if [ ${TRAVIS_OS_NAME:-'linux'} = 'linux' ]
-     then
-         make roundtrip_test
-     fi
  - |
      if [ ${TRAVIS_OS_NAME:-'linux'} = 'linux' ]
      then

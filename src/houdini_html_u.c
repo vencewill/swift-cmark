@@ -9,13 +9,14 @@
 
 /* Binary tree lookup code for entities added by JGM */
 
-static const unsigned char *S_lookup(int i, int low, int hi, const unsigned char *s,
-                               int len) {
+static const unsigned char *S_lookup(int i, int low, int hi,
+                                     const unsigned char *s, int len) {
   int j;
-  int cmp = strncmp((const char *)s, (const char *)cmark_entities[i].entity, len);
+  int cmp =
+      strncmp((const char *)s, (const char *)cmark_entities[i].entity, len);
   if (cmp == 0 && cmark_entities[i].entity[len] == 0) {
     return (const unsigned char *)cmark_entities[i].bytes;
-  } else if (cmp < 0 && i > low) {
+  } else if (cmp <= 0 && i > low) {
     j = i - ((i - low) / 2);
     if (j == i)
       j -= 1;

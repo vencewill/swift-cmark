@@ -6,10 +6,9 @@ bufsize_t _scan_at(bufsize_t (*scanner)(const unsigned char *), cmark_chunk *c, 
 {
 	bufsize_t res;
 	unsigned char *ptr = (unsigned char *)c->data;
-        unsigned char zero = '\0';
 
-        if (ptr == NULL) {
-          res = scanner(&zero);
+        if (ptr == NULL || offset > c->len) {
+          return 0;
         } else {
 	  unsigned char lim = ptr[c->len];
 
@@ -38,13 +37,13 @@ bufsize_t _scan_at(bufsize_t (*scanner)(const unsigned char *), cmark_chunk *c, 
 
   tagname = [A-Za-z][A-Za-z0-9-]*;
 
-  blocktagname = 'address'|'article'|'aside'|'base'|'basefont'|'blockquote'|'body'|'caption'|'center'|'col'|'colgroup'|'dd'|'details'|'dialog'|'dir'|'div'|'dl'|'dt'|'fieldset'|'figcaption'|'figure'|'footer'|'form'|'frame'|'frameset'|'h1'|'head'|'header'|'hr'|'html'|'iframe'|'legend'|'li'|'link'|'main'|'menu'|'menuitem'|'meta'|'nav'|'noframes'|'ol'|'optgroup'|'option'|'p'|'param'|'section'|'source'|'title'|'summary'|'table'|'tbody'|'td'|'tfoot'|'th'|'thead'|'title'|'tr'|'track'|'ul';
+  blocktagname = 'address'|'article'|'aside'|'base'|'basefont'|'blockquote'|'body'|'caption'|'center'|'col'|'colgroup'|'dd'|'details'|'dialog'|'dir'|'div'|'dl'|'dt'|'fieldset'|'figcaption'|'figure'|'footer'|'form'|'frame'|'frameset'|'h1'|'h2'|'h3'|'h4'|'h5'|'h6'|'head'|'header'|'hr'|'html'|'iframe'|'legend'|'li'|'link'|'main'|'menu'|'menuitem'|'nav'|'noframes'|'ol'|'optgroup'|'option'|'p'|'param'|'section'|'source'|'title'|'summary'|'table'|'tbody'|'td'|'tfoot'|'th'|'thead'|'title'|'tr'|'track'|'ul';
 
   attributename = [a-zA-Z_:][a-zA-Z0-9:._-]*;
 
-  unquotedvalue = [^\"'=<>`\x00]+;
+  unquotedvalue = [^ \t\r\n\v\f"'=<>`\x00]+;
   singlequotedvalue = ['][^'\x00]*['];
-  doublequotedvalue = [\"][^\"\x00]*[\"];
+  doublequotedvalue = ["][^"\x00]*["];
 
   attributevalue = unquotedvalue | singlequotedvalue | doublequotedvalue;
 
@@ -72,7 +71,7 @@ bufsize_t _scan_at(bufsize_t (*scanner)(const unsigned char *), cmark_chunk *c, 
   in_single_quotes = ['] (escaped_char|[^'\x00])* ['];
   in_parens        = [(] (escaped_char|[^)\x00])* [)];
 
-  scheme = 'coap'|'doi'|'javascript'|'aaa'|'aaas'|'about'|'acap'|'cap'|'cid'|'crid'|'data'|'dav'|'dict'|'dns'|'file'|'ftp'|'geo'|'go'|'gopher'|'h323'|'http'|'https'|'iax'|'icap'|'im'|'imap'|'info'|'ipp'|'iris'|'iris.beep'|'iris.xpc'|'iris.xpcs'|'iris.lwz'|'ldap'|'mailto'|'mid'|'msrp'|'msrps'|'mtqp'|'mupdate'|'news'|'nfs'|'ni'|'nih'|'nntp'|'opaquelocktoken'|'pop'|'pres'|'rtsp'|'service'|'session'|'shttp'|'sieve'|'sip'|'sips'|'sms'|'snmp'|'soap.beep'|'soap.beeps'|'tag'|'tel'|'telnet'|'tftp'|'thismessage'|'tn3270'|'tip'|'tv'|'urn'|'vemmi'|'ws'|'wss'|'xcon'|'xcon-userid'|'xmlrpc.beep'|'xmlrpc.beeps'|'xmpp'|'z39.50r'|'z39.50s'|'adiumxtra'|'afp'|'afs'|'aim'|'apt'|'attachment'|'aw'|'beshare'|'bitcoin'|'bolo'|'callto'|'chrome'|'chrome-extension'|'com-eventbrite-attendee'|'content'|'cvs'|'dlna-playsingle'|'dlna-playcontainer'|'dtn'|'dvb'|'ed2k'|'facetime'|'feed'|'finger'|'fish'|'gg'|'git'|'gizmoproject'|'gtalk'|'hcp'|'icon'|'ipn'|'irc'|'irc6'|'ircs'|'itms'|'jar'|'jms'|'keyparc'|'lastfm'|'ldaps'|'magnet'|'maps'|'market'|'message'|'mms'|'ms-help'|'msnim'|'mumble'|'mvn'|'notes'|'oid'|'palm'|'paparazzi'|'platform'|'proxy'|'psyc'|'query'|'res'|'resource'|'rmi'|'rsync'|'rtmp'|'secondlife'|'sftp'|'sgn'|'skype'|'smb'|'soldat'|'spotify'|'ssh'|'steam'|'svn'|'teamspeak'|'things'|'udp'|'unreal'|'ut2004'|'ventrilo'|'view-source'|'webcal'|'wtai'|'wyciwyg'|'xfire'|'xri'|'ymsgr';
+  scheme           = [A-Za-z][A-Za-z0-9.+-]{1,31};
 */
 
 // Try to match a scheme including colon.
@@ -82,7 +81,7 @@ bufsize_t _scan_scheme(const unsigned char *p)
   const unsigned char *start = p;
 /*!re2c
   scheme [:] { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -93,7 +92,7 @@ bufsize_t _scan_autolink_uri(const unsigned char *p)
   const unsigned char *start = p;
 /*!re2c
   scheme [:][^\x00-\x20<>]*[>]  { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -108,7 +107,7 @@ bufsize_t _scan_autolink_email(const unsigned char *p)
     [a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?
     ([.][a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*
     [>] { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -119,7 +118,7 @@ bufsize_t _scan_html_tag(const unsigned char *p)
   const unsigned char *start = p;
 /*!re2c
   htmltag { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -136,7 +135,7 @@ bufsize_t _scan_html_block_start(const unsigned char *p)
   '<!' [A-Z] { return 4; }
   '<![CDATA[' { return 5; }
   [<] [/]? blocktagname (spacechar | [/]? [>])  { return 6; }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -147,7 +146,7 @@ bufsize_t _scan_html_block_start_7(const unsigned char *p)
   const unsigned char *marker = NULL;
 /*!re2c
   [<] (opentag | closetag) [\t\n\f ]* [\r\n] { return 7; }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -157,8 +156,8 @@ bufsize_t _scan_html_block_end_1(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  .* [<] [/] ('script'|'pre'|'style') [>] { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  [^\n\x00]* [<] [/] ('script'|'pre'|'style') [>] { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -168,8 +167,8 @@ bufsize_t _scan_html_block_end_2(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  .* '-->' { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  [^\n\x00]* '-->' { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -179,8 +178,8 @@ bufsize_t _scan_html_block_end_3(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  .* '?>' { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  [^\n\x00]* '?>' { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -190,8 +189,8 @@ bufsize_t _scan_html_block_end_4(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  .* '>' { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  [^\n\x00]* '>' { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -201,23 +200,8 @@ bufsize_t _scan_html_block_end_5(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  .* ']]>' { return (bufsize_t)(p - start); }
-  .? { return 0; }
-*/
-}
-
-// Try to match a URL in a link or reference, return number of chars matched.
-// This may optionally be contained in <..>; otherwise
-// whitespace and unbalanced right parentheses aren't allowed.
-// Newlines aren't ever allowed.
-bufsize_t _scan_link_url(const unsigned char *p)
-{
-  const unsigned char *marker = NULL;
-  const unsigned char *start = p;
-/*!re2c
-  [ \r\n]* [<] ([^<>\r\n\\\x00] | escaped_char | [\\])* [>] { return (bufsize_t)(p - start); }
-  [ \r\n]* (reg_char+ | escaped_char | in_parens_nosp | [\\][^()])* { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  [^\n\x00]* ']]>' { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -232,56 +216,55 @@ bufsize_t _scan_link_title(const unsigned char *p)
   ["] (escaped_char|[^"\x00])* ["]   { return (bufsize_t)(p - start); }
   ['] (escaped_char|[^'\x00])* ['] { return (bufsize_t)(p - start); }
   [(] (escaped_char|[^)\x00])* [)]  { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
 // Match space characters, including newlines.
 bufsize_t _scan_spacechars(const unsigned char *p)
 {
-  const unsigned char *marker = NULL;
   const unsigned char *start = p; \
 /*!re2c
-  [ \t\v\f\r\n]* { return (bufsize_t)(p - start); }
-  . { return 0; }
+  [ \t\v\f\r\n]+ { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
-// Match ATX header start.
-bufsize_t _scan_atx_header_start(const unsigned char *p)
+// Match ATX heading start.
+bufsize_t _scan_atx_heading_start(const unsigned char *p)
 {
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  [#]{1,6} ([ ]+|[\r\n])  { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  [#]{1,6} ([ \t]+|[\r\n])  { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
-// Match setext header line.  Return 1 for level-1 header,
+// Match setext heading line.  Return 1 for level-1 heading,
 // 2 for level-2, 0 for no match.
-bufsize_t _scan_setext_header_line(const unsigned char *p)
+bufsize_t _scan_setext_heading_line(const unsigned char *p)
 {
   const unsigned char *marker = NULL;
 /*!re2c
-  [=]+ [ ]* [\r\n] { return 1; }
-  [-]+ [ ]* [\r\n] { return 2; }
-  .? { return 0; }
+  [=]+ [ \t]* [\r\n] { return 1; }
+  [-]+ [ \t]* [\r\n] { return 2; }
+  * { return 0; }
 */
 }
 
-// Scan a horizontal rule line: "...three or more hyphens, asterisks,
+// Scan a thematic break line: "...three or more hyphens, asterisks,
 // or underscores on a line by themselves. If you wish, you may use
 // spaces between the hyphens or asterisks."
-bufsize_t _scan_hrule(const unsigned char *p)
+bufsize_t _scan_thematic_break(const unsigned char *p)
 {
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  ([*][ ]*){3,} [ \t]* [\r\n] { return (bufsize_t)(p - start); }
-  ([_][ ]*){3,} [ \t]* [\r\n] { return (bufsize_t)(p - start); }
-  ([-][ ]*){3,} [ \t]* [\r\n] { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  ([*][ \t]*){3,} [ \t]* [\r\n] { return (bufsize_t)(p - start); }
+  ([_][ \t]*){3,} [ \t]* [\r\n] { return (bufsize_t)(p - start); }
+  ([-][ \t]*){3,} [ \t]* [\r\n] { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -292,8 +275,8 @@ bufsize_t _scan_open_code_fence(const unsigned char *p)
   const unsigned char *start = p;
 /*!re2c
   [`]{3,} / [^`\r\n\x00]*[\r\n] { return (bufsize_t)(p - start); }
-  [~]{3,} / [^~\r\n\x00]*[\r\n] { return (bufsize_t)(p - start); }
-  .?                        { return 0; }
+  [~]{3,} / [^\r\n\x00]*[\r\n] { return (bufsize_t)(p - start); }
+  * { return 0; }
 */
 }
 
@@ -305,7 +288,7 @@ bufsize_t _scan_close_code_fence(const unsigned char *p)
 /*!re2c
   [`]{3,} / [ \t]*[\r\n] { return (bufsize_t)(p - start); }
   [~]{3,} / [ \t]*[\r\n] { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -316,9 +299,9 @@ bufsize_t _scan_entity(const unsigned char *p)
   const unsigned char *marker = NULL;
   const unsigned char *start = p;
 /*!re2c
-  [&] ([#] ([Xx][A-Fa-f0-9]{1,8}|[0-9]{1,8}) |[A-Za-z][A-Za-z0-9]{1,31} ) [;]
+  [&] ([#] ([Xx][A-Fa-f0-9]{1,6}|[0-9]{1,7}) |[A-Za-z][A-Za-z0-9]{1,31} ) [;]
      { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
@@ -331,7 +314,7 @@ bufsize_t _scan_dangerous_url(const unsigned char *p)
 /*!re2c
   'data:image/' ('png'|'gif'|'jpeg'|'webp') { return 0; }
   'javascript:' | 'vbscript:' | 'file:' | 'data:' { return (bufsize_t)(p - start); }
-  .? { return 0; }
+  * { return 0; }
 */
 }
 
