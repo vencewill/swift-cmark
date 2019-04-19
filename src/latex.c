@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include <ctype.h>
 
 #include "config.h"
 #include "cmark.h"
@@ -12,14 +11,14 @@
 #include "scanners.h"
 #include "render.h"
 
-#define safe_strlen(s) cmark_strbuf_safe_strlen(s)
 #define OUT(s, wrap, escaping) renderer->out(renderer, s, wrap, escaping)
 #define LIT(s) renderer->out(renderer, s, false, LITERAL)
 #define CR() renderer->cr(renderer)
 #define BLANKLINE() renderer->blankline(renderer)
+#define LIST_NUMBER_STRING_SIZE 20
 
-static inline void outc(cmark_renderer *renderer, cmark_escaping escape,
-                        int32_t c, unsigned char nextc) {
+static CMARK_INLINE void outc(cmark_renderer *renderer, cmark_escaping escape,
+                              int32_t c, unsigned char nextc) {
   if (escape == LITERAL) {
     cmark_render_code_point(renderer, c);
     return;
@@ -43,7 +42,7 @@ static inline void outc(cmark_renderer *renderer, cmark_escaping escape,
     break;
   case 45:             // '-'
     if (nextc == 45) { // prevent ligature
-      cmark_render_ascii(renderer, "\\-");
+      cmark_render_ascii(renderer, "-{}");
     } else {
       cmark_render_ascii(renderer, "-");
     }
@@ -142,7 +141,13 @@ static inline void outc(cmark_renderer *renderer, cmark_escaping escape,
   }
 }
 
-typedef enum { NO_LINK, URL_AUTOLINK, EMAIL_AUTOLINK, NORMAL_LINK } link_type;
+typedef enum {
+  NO_LINK,
+  URL_AUTOLINK,
+  EMAIL_AUTOLINK,
+  NORMAL_LINK,
+  INTERNAL_LINK
+} link_type;
 
 static link_type get_link_type(cmark_node *node) {
   size_t title_len, url_len;
@@ -158,38 +163,45 @@ static link_type get_link_type(cmark_node *node) {
   const char *url = cmark_node_get_url(node);
   cmark_chunk url_chunk = cmark_chunk_literal(url);
 
-  url_len = safe_strlen(url);
+  if (url && *url == '#') {
+    return INTERNAL_LINK;
+  }
+
+  url_len = strlen(url);
   if (url_len == 0 || scan_scheme(&url_chunk, 0) == 0) {
     return NO_LINK;
   }
 
   const char *title = cmark_node_get_title(node);
-  title_len = safe_strlen(title);
+  title_len = strlen(title);
   // if it has a title, we can't treat it as an autolink:
-  if (title_len > 0) {
-    return NORMAL_LINK;
+  if (title_len == 0) {
+
+    link_text = node->first_child;
+    cmark_consolidate_text_nodes(link_text);
+
+    if (!link_text)
+      return NO_LINK;
+
+    realurl = (char *)url;
+    realurllen = (int)url_len;
+    if (strncmp(realurl, "mailto:", 7) == 0) {
+      realurl += 7;
+      realurllen -= 7;
+      isemail = true;
+    }
+    if (realurllen == link_text->as.literal.len &&
+        strncmp(realurl, (char *)link_text->as.literal.data,
+                link_text->as.literal.len) == 0) {
+      if (isemail) {
+        return EMAIL_AUTOLINK;
+      } else {
+        return URL_AUTOLINK;
+      }
+    }
   }
 
-  link_text = node->first_child;
-  cmark_consolidate_text_nodes(link_text);
-  realurl = (char *)url;
-  realurllen = url_len;
-  if (strncmp(realurl, "mailto:", 7) == 0) {
-    realurl += 7;
-    realurllen -= 7;
-    isemail = true;
-  }
-  if (realurllen == link_text->as.literal.len &&
-      strncmp(realurl, (char *)link_text->as.literal.data,
-              link_text->as.literal.len) == 0) {
-    if (isemail) {
-      return EMAIL_AUTOLINK;
-    } else {
-      return URL_AUTOLINK;
-    }
-  } else {
-    return NORMAL_LINK;
-  }
+  return NORMAL_LINK;
 }
 
 static int S_get_enumlevel(cmark_node *node) {
@@ -208,11 +220,11 @@ static int S_get_enumlevel(cmark_node *node) {
 static int S_render_node(cmark_renderer *renderer, cmark_node *node,
                          cmark_event_type ev_type, int options) {
   int list_number;
-  char list_number_string[20];
+  int enumlevel;
+  char list_number_string[LIST_NUMBER_STRING_SIZE];
   bool entering = (ev_type == CMARK_EVENT_ENTER);
   cmark_list_type list_type;
-  const char *roman_numerals[] = {"",   "i",   "ii",   "iii", "iv", "v",
-                                  "vi", "vii", "viii", "ix",  "x"};
+  bool allow_wrap = renderer->width > 0 && !(CMARK_OPT_NOBREAKS & options);
 
   // avoid warning about unused parameter:
   (void)(options);
@@ -240,12 +252,24 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
       CR();
       list_number = cmark_node_get_list_start(node);
       if (list_number > 1) {
-        sprintf(list_number_string, "%d", list_number);
-        LIT("\\setcounter{enum");
-        LIT((char *)roman_numerals[S_get_enumlevel(node)]);
-        LIT("}{");
-        OUT(list_number_string, false, NORMAL);
-        LIT("}");
+        enumlevel = S_get_enumlevel(node);
+        // latex normally supports only five levels
+        if (enumlevel >= 1 && enumlevel <= 5) {
+          snprintf(list_number_string, LIST_NUMBER_STRING_SIZE, "%d",
+                   list_number);
+          LIT("\\setcounter{enum");
+          switch (enumlevel) {
+          case 1: LIT("i"); break;
+          case 2: LIT("ii"); break;
+          case 3: LIT("iii"); break;
+          case 4: LIT("iv"); break;
+          case 5: LIT("v"); break;
+          default: LIT("i"); break;
+	  }
+          LIT("}{");
+          OUT(list_number_string, false, NORMAL);
+          LIT("}");
+        }
         CR();
       }
     } else {
@@ -264,9 +288,9 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     }
     break;
 
-  case CMARK_NODE_HEADER:
+  case CMARK_NODE_HEADING:
     if (entering) {
-      switch (cmark_node_get_header_level(node)) {
+      switch (cmark_node_get_heading_level(node)) {
       case 1:
         LIT("\\section");
         break;
@@ -300,10 +324,17 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     BLANKLINE();
     break;
 
-  case CMARK_NODE_HTML:
+  case CMARK_NODE_HTML_BLOCK:
     break;
 
-  case CMARK_NODE_HRULE:
+  case CMARK_NODE_CUSTOM_BLOCK:
+    CR();
+    OUT(entering ? cmark_node_get_on_enter(node) : cmark_node_get_on_exit(node),
+        false, LITERAL);
+    CR();
+    break;
+
+  case CMARK_NODE_THEMATIC_BREAK:
     BLANKLINE();
     LIT("\\begin{center}\\rule{0.5\\linewidth}{\\linethickness}\\end{center}");
     BLANKLINE();
@@ -316,7 +347,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     break;
 
   case CMARK_NODE_TEXT:
-    OUT(cmark_node_get_literal(node), true, NORMAL);
+    OUT(cmark_node_get_literal(node), allow_wrap, NORMAL);
     break;
 
   case CMARK_NODE_LINEBREAK:
@@ -325,10 +356,13 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     break;
 
   case CMARK_NODE_SOFTBREAK:
-    if (renderer->width == 0) {
+    if (options & CMARK_OPT_HARDBREAKS) {
+      LIT("\\\\");
+      CR();
+    } else if (renderer->width == 0 && !(CMARK_OPT_NOBREAKS & options)) {
       CR();
     } else {
-      OUT(" ", true, NORMAL);
+      OUT(" ", allow_wrap, NORMAL);
     }
     break;
 
@@ -338,7 +372,12 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     LIT("}");
     break;
 
-  case CMARK_NODE_INLINE_HTML:
+  case CMARK_NODE_HTML_INLINE:
+    break;
+
+  case CMARK_NODE_CUSTOM_INLINE:
+    OUT(entering ? cmark_node_get_on_enter(node) : cmark_node_get_on_exit(node),
+        false, LITERAL);
     break;
 
   case CMARK_NODE_STRONG:
@@ -365,7 +404,8 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
       case URL_AUTOLINK:
         LIT("\\url{");
         OUT(url, false, URL);
-        break;
+        LIT("}");
+        return 0; // Don't process further nodes to avoid double-rendering artefacts
       case EMAIL_AUTOLINK:
         LIT("\\href{");
         OUT(url, false, URL);
@@ -374,6 +414,11 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
       case NORMAL_LINK:
         LIT("\\href{");
         OUT(url, false, URL);
+        LIT("}{");
+        break;
+      case INTERNAL_LINK:
+        LIT("\\protect\\hyperlink{");
+        OUT(url + 1, false, URL);
         LIT("}{");
         break;
       case NO_LINK:
