@@ -1,4 +1,4 @@
-.TH cmark 3 "June 02, 2017" "LOCAL" "Library Functions Manual"
+.TH cmark 3 "March 19, 2019" "LOCAL" "Library Functions Manual"
 .SH
 NAME
 .PP
@@ -727,11 +727,25 @@ Render \f[C]softbreak\f[] elements as hard line breaks.
 .fi
 
 .PP
-Suppress raw HTML and unsafe links (\f[C]javascript:\f[],
+\f[C]CMARK_OPT_SAFE\f[] is defined here for API compatibility, but it no
+longer has any effect. "Safe" mode is now the default: set
+\f[C]CMARK_OPT_UNSAFE\f[] to disable it.
+
+.PP
+.nf
+\fC
+.RS 0n
+#define CMARK_OPT_UNSAFE (1 << 17)
+.RE
+\f[]
+.fi
+
+.PP
+Render raw HTML and unsafe links (\f[C]javascript:\f[],
 \f[C]vbscript:\f[], \f[C]file:\f[], and \f[C]data:\f[], except for
 \f[C]image/png\f[], \f[C]image/gif\f[], \f[C]image/jpeg\f[], or
-\f[C]image/webp\f[] mime types). Raw HTML is replaced by a placeholder
-HTML comment. Unsafe links are replaced by empty strings.
+\f[C]image/webp\f[] mime types). By default, raw HTML is replaced by a
+placeholder HTML comment. Unsafe links are replaced by empty strings.
 
 .PP
 .nf
