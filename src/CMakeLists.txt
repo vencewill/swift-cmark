@@ -46,10 +46,7 @@ set(LIBRARY_SOURCES
   )
 
 set(PROGRAM "cmark")
-set(PROGRAM_SOURCES
-  ${LIBRARY_SOURCES}
-  main.c
-  )
+set(PROGRAM_SOURCES main.c)
 
 include_directories(. ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -59,11 +56,15 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmark_version.h.in
 include (GenerateExportHeader)
 
 add_executable(${PROGRAM} ${PROGRAM_SOURCES})
-add_compiler_export_flags()
 
-# Disable the PUBLIC declarations when compiling the executable:
-set_target_properties(${PROGRAM} PROPERTIES
-  COMPILE_FLAGS -DCMARK_STATIC_DEFINE)
+if (CMARK_STATIC)
+  target_link_libraries(${PROGRAM} ${STATICLIBRARY})
+  # Disable the PUBLIC declarations when compiling the executable:
+  set_target_properties(${PROGRAM} PROPERTIES
+    COMPILE_FLAGS -DCMARK_STATIC_DEFINE)
+elseif (CMARK_SHARED)
+  target_link_libraries(${PROGRAM} ${LIBRARY})
+endif()
 
 # Check integrity of node structure when compiled as debug:
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DCMARK_DEBUG_NODES")
@@ -72,12 +73,9 @@ set(CMAKE_LINKER_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG}")
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS_RELEASE} -pg")
 set(CMAKE_LINKER_PROFILE "${CMAKE_LINKER_FLAGS_RELEASE} -pg")
 
-if ((${CMAKE_MAJOR_VERSION} GREATER 1 AND ${CMAKE_MINOR_VERSION} GREATER 8) OR ${CMAKE_MAJOR_VERSION} GREATER 2)
-  set(CMAKE_C_VISIBILITY_PRESET hidden)
-  set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
-elseif(CMAKE_COMPILER_IS_GNUCC OR ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-endif ()
+# -fvisibility=hidden
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 if (CMARK_SHARED)
   add_library(${LIBRARY} SHARED ${LIBRARY_SOURCES})
