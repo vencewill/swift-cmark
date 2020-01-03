@@ -182,6 +182,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
   char *emph_delim;
   bool first_in_list_item;
   bufsize_t marker_width;
+  bool has_nonspace;
   bool allow_wrap = renderer->width > 0 && !(CMARK_OPT_NOBREAKS & options) &&
                     !(CMARK_OPT_HARDBREAKS & options);
 
@@ -214,8 +215,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     break;
 
   case CMARK_NODE_LIST:
-    if (!entering && node->next && (node->next->type == CMARK_NODE_CODE_BLOCK ||
-                                    node->next->type == CMARK_NODE_LIST)) {
+    if (!entering && node->next && (node->next->type == CMARK_NODE_LIST)) {
       // this ensures that a following indented code block or list will be
       // inteprereted correctly.
       CR();
@@ -276,6 +276,7 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     break;
 
   case CMARK_NODE_CODE_BLOCK:
+
     first_in_list_item = node->prev == NULL && node->parent &&
                          node->parent->type == CMARK_NODE_ITEM;
 
@@ -287,34 +288,23 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     fencechar[0] = strchr(info, '`') == NULL ? '`' : '~';
     code = cmark_node_get_literal(node);
     code_len = strlen(code);
-    // use indented form if no info, and code doesn't
-    // begin or end with a blank line, and code isn't
-    // first thing in a list item
-    if (info_len == 0 && (code_len > 2 && !cmark_isspace(code[0]) &&
-                          !(cmark_isspace(code[code_len - 1]) &&
-                            cmark_isspace(code[code_len - 2]))) &&
-        !first_in_list_item) {
-      LIT("    ");
-      cmark_strbuf_puts(renderer->prefix, "    ");
-      OUT(cmark_node_get_literal(node), false, LITERAL);
-      cmark_strbuf_truncate(renderer->prefix, renderer->prefix->size - 4);
-    } else {
-      numticks = longest_backtick_sequence(code) + 1;
-      if (numticks < 3) {
-        numticks = 3;
-      }
-      for (i = 0; i < numticks; i++) {
-        LIT(fencechar);
-      }
-      LIT(" ");
-      OUT(info, false, LITERAL);
-      CR();
-      OUT(cmark_node_get_literal(node), false, LITERAL);
-      CR();
-      for (i = 0; i < numticks; i++) {
-        LIT(fencechar);
-      }
+
+    numticks = longest_backtick_sequence(code) + 1;
+    if (numticks < 3) {
+      numticks = 3;
     }
+    for (i = 0; i < numticks; i++) {
+      LIT(fencechar);
+    }
+    LIT(" ");
+    OUT(info, false, LITERAL);
+    CR();
+    OUT(cmark_node_get_literal(node), false, LITERAL);
+    CR();
+    for (i = 0; i < numticks; i++) {
+      LIT(fencechar);
+    }
+
     BLANKLINE();
     break;
 
@@ -371,9 +361,16 @@ static int S_render_node(cmark_renderer *renderer, cmark_node *node,
     code = cmark_node_get_literal(node);
     code_len = strlen(code);
     numticks = shortest_unused_backtick_sequence(code);
+    has_nonspace = false;
+    for (i=0; i < code_len; i++) {
+      if (code[i] != ' ') {
+        has_nonspace = true;
+        break;
+      }
+    }
     extra_spaces = code_len == 0 ||
 	    code[0] == '`' || code[code_len - 1] == '`' ||
-	    code[0] == ' ' || code[code_len - 1] == ' ';
+	    (has_nonspace && code[0] == ' ' && code[code_len - 1] == ' ');
     for (i = 0; i < numticks; i++) {
       LIT("`");
     }
