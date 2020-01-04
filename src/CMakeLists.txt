@@ -142,9 +142,6 @@ if(CMARK_SHARED OR CMARK_STATIC)
   export(TARGETS ${CMARK_INSTALL} FILE cmarkTargets.cmake)
 endif()
 
-export(TARGETS ${PROGRAM} ${LIBRARY} ${STATICLIBRARY}
-  FILE ${CMAKE_CURRENT_BINARY_DIR}/CMarkExports.cmake)
-
 # Feature tests
 include(CheckIncludeFile)
 include(CheckCSourceCompiles)
