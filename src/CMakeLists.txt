@@ -62,6 +62,10 @@ elseif (CMARK_SHARED)
   target_link_libraries(${PROGRAM} ${LIBRARY})
 endif()
 
+# -fvisibility=hidden
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+
 if (CMARK_SHARED)
   add_library(${LIBRARY} SHARED ${LIBRARY_SOURCES})
   set_target_properties(${LIBRARY} PROPERTIES
@@ -87,7 +91,7 @@ if (CMARK_STATIC)
   add_library(${STATICLIBRARY} STATIC ${LIBRARY_SOURCES})
   set_target_properties(${STATICLIBRARY} PROPERTIES
     COMPILE_FLAGS -DCMARK_STATIC_DEFINE
-    OUTPUT_NAME "cmark$<$<BOOL:MSVC>:_static>"
+    OUTPUT_NAME "cmark$<$<BOOL:${MSVC}>:_static>"
     POSITION_INDEPENDENT_CODE ON
     VERSION ${PROJECT_VERSION})
   target_include_directories(${STATICLIBRARY} INTERFACE
