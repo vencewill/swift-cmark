@@ -9,13 +9,12 @@ import multiprocessing
 import time
 from cmark import CMark
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run cmark tests.')
-    parser.add_argument('--program', dest='program', nargs='?', default=None,
-            help='program to test')
-    parser.add_argument('--library-dir', dest='library_dir', nargs='?',
-            default=None, help='directory containing dynamic library')
-    args = parser.parse_args(sys.argv[1:])
+parser = argparse.ArgumentParser(description='Run cmark tests.')
+parser.add_argument('--program', dest='program', nargs='?', default=None,
+        help='program to test')
+parser.add_argument('--library-dir', dest='library_dir', nargs='?',
+        default=None, help='directory containing dynamic library')
+args = parser.parse_args(sys.argv[1:])
 
 allowed_failures = {"many references": True}
 
@@ -106,34 +105,38 @@ def run_pathological_test(description, results):
         else:
             results['failed'].append(description)
 
-print("Testing pathological cases:")
-for description in pathological:
-    p = multiprocessing.Process(target=run_pathological_test,
-              args=(description, results,))
-    p.start()
-    # wait 4 seconds or until it finishes
-    p.join(4)
-    # kill it if still active
-    if p.is_alive():
-        print(description, '[TIMEOUT]')
-        if allowed_failures[description]:
-            results['ignored'].append(description)
-        else:
-            results['errored'].append(description)
-        p.terminate()
-        p.join()
+def run_tests():
+    print("Testing pathological cases:")
+    for description in pathological:
+        p = multiprocessing.Process(target=run_pathological_test,
+                  args=(description, results,))
+        p.start()
+        # wait 4 seconds or until it finishes
+        p.join(4)
+        # kill it if still active
+        if p.is_alive():
+            print(description, '[TIMEOUT]')
+            if allowed_failures[description]:
+                results['ignored'].append(description)
+            else:
+                results['errored'].append(description)
+            p.terminate()
+            p.join()
 
-passed  = len(results['passed'])
-failed  = len(results['failed'])
-errored = len(results['errored'])
-ignored = len(results['ignored'])
+    passed  = len(results['passed'])
+    failed  = len(results['failed'])
+    errored = len(results['errored'])
+    ignored = len(results['ignored'])
 
-print("%d passed, %d failed, %d errored" % (passed, failed, errored))
-if ignored > 0:
-    print("Ignoring these allowed failures:")
-    for x in results['ignored']:
-        print(x)
-if failed == 0 and errored == 0:
-    exit(0)
-else:
-    exit(1)
+    print("%d passed, %d failed, %d errored" % (passed, failed, errored))
+    if ignored > 0:
+        print("Ignoring these allowed failures:")
+        for x in results['ignored']:
+            print(x)
+    if failed == 0 and errored == 0:
+        exit(0)
+    else:
+        exit(1)
+
+if __name__ == "__main__":
+    run_tests()
