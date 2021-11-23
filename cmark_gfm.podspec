@@ -1,8 +1,7 @@
 Pod::Spec.new do |s|
     s.name = "cmark_gfm"
     s.version = "0.0.1"
-    s.summary = "An extended version of the C reference implementation of
-    [CommonMark]"
+    s.summary = "An extended version of the C reference implementation of [CommonMark]"
     s.homepage = "https://github.com/commonmark/cmark"
     s.license = { :type => "MIT", :file => "COPYING" }
     s.author = { "John MacFarlane" => "https://github.com/jgm" }
