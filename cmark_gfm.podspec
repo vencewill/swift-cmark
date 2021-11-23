@@ -19,33 +19,10 @@ Pod::Spec.new do |s|
       "src/config.h.in",
       "src/CMakeLists.txt",
       "src/cmark-gfm_version.h.in",
-      'src/include/module.modulemap',
       "extensions/CMakeLists.txt",
       "extensions/ext_scanners.re",
     ]
-    s.public_header_files = [
-      "src/include/cmark-gfm.h",
-      "src/include/cmark-gfm_config.h",
-      "src/include/cmark-gfm-extension_api.h",
-      "src/include/buffer.h",
-      "src/include/chunk.h",
-      "src/include/cmark_ctype.h",
-      "src/include/footnotes.h",
-      "src/include/houdini.h",
-      "src/include/html.h",
-      "src/include/inlines.h",
-      "src/include/iterator.h",
-      "src/include/map.h",
-      "src/include/mutex.h",
-      "src/include/node.h",
-      "src/include/parser.h",
-      "src/include/plugin.h",
-      "src/include/references.h",
-      "src/include/registry.h",
-      "src/include/render.h",
-      "src/include/scanners.h",
-      "src/include/syntax_extension.h",
-      "src/include/utf8.h",
-      "extensions/include/*.h",
-    ]
+    
+    s.preserve_path = 'src/include/module.modulemap'
+    s.pod_target_xcconfig = { 'SWIFT_INCLUDE_PATHS' => '$(SRCROOT)/cmark_gfm/**' }
   end
