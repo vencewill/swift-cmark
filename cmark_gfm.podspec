@@ -23,5 +23,29 @@ Pod::Spec.new do |s|
       "extensions/CMakeLists.txt",
       "extensions/ext_scanners.re",
     ]
-    s.module_map = 'src/include/module.modulemap'
+    s.public_header_files = [
+      "src/include/cmark-gfm.h",
+      "src/include/cmark-gfm_config.h",
+      "src/include/cmark-gfm-extension_api.h",
+      "src/include/buffer.h",
+      "src/include/chunk.h",
+      "src/include/cmark_ctype.h",
+      "src/include/footnotes.h",
+      "src/include/houdini.h",
+      "src/include/html.h",
+      "src/include/inlines.h",
+      "src/include/iterator.h",
+      "src/include/map.h",
+      "src/include/mutex.h",
+      "src/include/node.h",
+      "src/include/parser.h",
+      "src/include/plugin.h",
+      "src/include/references.h",
+      "src/include/registry.h",
+      "src/include/render.h",
+      "src/include/scanners.h",
+      "src/include/syntax_extension.h",
+      "src/include/utf8.h",
+      "extensions/include/*.h",
+    ]
   end
