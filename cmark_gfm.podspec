@@ -9,23 +9,17 @@ Pod::Spec.new do |s|
   
     s.swift_version = '5.0'
 
-    s.subspec "cmark-gfm" do |spec|
-      spec.source_files = "src/**/*"
-      spec.exclude_files = [
-        "src/scanners.re",
-        "src/libcmark-gfm.pc.in",
-        "src/config.h.in",
-        "src/CMakeLists.txt",
-        "src/cmark-gfm_version.h.in",
-      ]
-    end
+    s.source_files = [
+      "src/**/*", "extensions/**/*"
+    ]
     
-    s.subspec "cmark-gfm-extensions" do |spec|
-        spec.dependency "cmark_gfm/cmark-gfm"
-        spec.source_files = "extensions/**/*"
-        spec.exclude_files = [
-            "extensions/CMakeLists.txt",
-            "extensions/ext_scanners.re",
-        ]
-    end
+    s.exclude_files = [
+      "src/scanners.re",
+      "src/libcmark-gfm.pc.in",
+      "src/config.h.in",
+      "src/CMakeLists.txt",
+      "src/cmark-gfm_version.h.in",
+      "extensions/CMakeLists.txt",
+      "extensions/ext_scanners.re",
+    ]
   end
