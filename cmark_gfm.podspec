@@ -19,7 +19,9 @@ Pod::Spec.new do |s|
       "src/config.h.in",
       "src/CMakeLists.txt",
       "src/cmark-gfm_version.h.in",
+      'src/include/module.modulemap',
       "extensions/CMakeLists.txt",
       "extensions/ext_scanners.re",
     ]
+    s.module_map = 'src/include/module.modulemap'
   end
